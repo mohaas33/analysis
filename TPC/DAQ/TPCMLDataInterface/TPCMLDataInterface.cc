@@ -10,7 +10,7 @@
 
 #include "TPCMLDataInterface.h"
 
-#include <tpc/TpcDefs.h>
+#include <trackbase/TpcDefs.h>
 
 #include <g4detectors/PHG4Cell.h>
 #include <g4detectors/PHG4CellContainer.h>
@@ -53,7 +53,7 @@
 #include <TTree.h>
 #include <TVector3.h>
 
-#include <HepMC/GenEvent.h>
+//#include <HepMC/GenEvent.h>
 
 #include <CLHEP/Units/SystemOfUnits.h>
 
