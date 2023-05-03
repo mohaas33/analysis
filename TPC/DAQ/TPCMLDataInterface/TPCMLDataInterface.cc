@@ -14,8 +14,9 @@
 
 #include <g4detectors/PHG4Cell.h>
 #include <g4detectors/PHG4CellContainer.h>
-#include <g4detectors/PHG4CylinderCellGeom.h>
-#include <g4detectors/PHG4CylinderCellGeomContainer.h>
+#include <g4detectors/PHG4TpcCylinderGeomContainer.h>
+#include <g4detectors/PHG4TpcCylinderGeom.h>
+//#include <g4detectors/PHG4TpcCylinderGeom.h>
 //#include <trackbase_historic/SvtxHit.h>
 //#include <trackbase_historic/SvtxHitMap.h>
 #include <g4main/PHG4Hit.h>
@@ -127,7 +128,7 @@ int TPCMLDataInterface::End(PHCompositeNode* topNode)
   TTree* T_Index = new TTree("T_Index", "T_Index");
   assert(T_Index);
   T_Index->Write();
-
+  _rawHits->Write();
   if (m_h5File)
   {
     delete m_h5File;
@@ -139,7 +140,7 @@ int TPCMLDataInterface::End(PHCompositeNode* topNode)
 
 int TPCMLDataInterface::InitRun(PHCompositeNode* topNode)
 {
-  PHG4CylinderCellGeomContainer* seggeo = findNode::getClass<PHG4CylinderCellGeomContainer>(topNode, "CYLINDERCELLGEOM_SVTX");
+  PHG4TpcCylinderGeomContainer* seggeo = findNode::getClass<PHG4TpcCylinderGeomContainer>(topNode, "CYLINDERCELLGEOM_SVTX");
   if (!seggeo)
   {
     cout << "could not locate geo node "
@@ -150,7 +151,7 @@ int TPCMLDataInterface::InitRun(PHCompositeNode* topNode)
   int nZBins = 0;
   for (int layer = m_minLayer; layer <= m_maxLayer; ++layer)
   {
-    PHG4CylinderCellGeom* layerGeom =
+    PHG4TpcCylinderGeom* layerGeom =
         seggeo->GetLayerCellGeom(layer);
     assert(layerGeom);
 
@@ -194,7 +195,7 @@ int TPCMLDataInterface::InitRun(PHCompositeNode* topNode)
 
   //  for (unsigned int layer = m_minLayer; layer <= m_maxLayer; ++layer)
   //  {
-  //    const PHG4CylinderCellGeom* layer_geom = seggeo->GetLayerCellGeom(layer);
+  //    const PHG4TpcCylinderGeom* layer_geom = seggeo->GetLayerCellGeom(layer);
 
   //    const string histNameCellHit(boost::str(boost::format{"hCellHit_Layer%1%"} % layer));
   //    const string histNameCellCharge(boost::str(boost::format{"hCellCharge_Layer%1%"} % layer));
@@ -265,6 +266,14 @@ int TPCMLDataInterface::InitRun(PHCompositeNode* topNode)
          << endl;
   m_h5File = new H5File(m_outputFileNameBase + ".h5", H5F_ACC_TRUNC);
 
+  _hit_r = 0;
+  _hit_adc  = 0;
+  // TTree
+  _rawHits = new TTree("hTree", "tpc hit tree for ionization");
+  _rawHits->Branch("hit_r", &_hit_r);
+  _rawHits->Branch("hit_adc", &_hit_adc);
+
+
   return Fun4AllReturnCodes::EVENT_OK;
 }
 
@@ -316,6 +325,12 @@ int TPCMLDataInterface::process_event(PHCompositeNode* topNode)
     cout << PHWHERE << "ERROR: Can't find node TRKR_HITSET" << endl;
     return Fun4AllReturnCodes::ABORTRUN;
   }
+  //TrkrHitSetContainerv1* hits_v1 = findNode::getClass<TrkrHitSetContainerv1>(topNode, "TRKR_HITSET");
+  //if (!hits_v1)
+  //{
+  //  cout << PHWHERE << "TrkrHitSetContainerv1 ERROR: Can't find node TRKR_HITSET" << endl;
+  //  return Fun4AllReturnCodes::ABORTRUN;
+  //}
 
   //  PHG4CellContainer* cells = findNode::getClass<PHG4CellContainer>(topNode, "G4CELL_SVTX");
   //  if (!cells)
@@ -325,7 +340,7 @@ int TPCMLDataInterface::process_event(PHCompositeNode* topNode)
   //    exit(1);
   //  }
 
-  PHG4CylinderCellGeomContainer* seggeo = findNode::getClass<PHG4CylinderCellGeomContainer>(topNode, "CYLINDERCELLGEOM_SVTX");
+  PHG4TpcCylinderGeomContainer* seggeo = findNode::getClass<PHG4TpcCylinderGeomContainer>(topNode, "CYLINDERCELLGEOM_SVTX");
   if (!seggeo)
   {
     cout << "TPCMLDataInterface::process_event - could not locate geo node "
@@ -434,7 +449,7 @@ int TPCMLDataInterface::process_event(PHCompositeNode* topNode)
   int sumDataSize = 0;
   for (int layer = m_minLayer; layer <= m_maxLayer; ++layer)
   {
-    PHG4CylinderCellGeom* layerGeom =
+    PHG4TpcCylinderGeom* layerGeom =
         seggeo->GetLayerCellGeom(layer);
     assert(layerGeom);
 
@@ -516,6 +531,52 @@ int TPCMLDataInterface::process_event(PHCompositeNode* topNode)
   //    SvtxHit* hit = iter->second;
   // loop over the TPC HitSet objects
   TrkrHitSetContainer::ConstRange hitsetrange = hits->getHitSets(TrkrDefs::TrkrId::tpcId);
+  //eshulga new:
+  int ntpc_phibins[3]= {1152, 1536, 2304}; 
+  for(int n_sec=0; n_sec<3; n_sec++){
+    unsigned int pads_per_sector = ntpc_phibins[n_sec] / 12;
+    unsigned int sector = 200 / pads_per_sector;
+    unsigned int layernum = 1;
+    unsigned int side = 1;
+
+    TrkrDefs::hitsetkey hitsetkey = TpcDefs::genHitSetKey(layernum, sector, side);
+    TrkrHitSetContainer::Iterator hitsetit = hits->findOrAddHitSet(hitsetkey);
+
+    const int layer_tmp = TrkrDefs::getLayer(hitsetit->first);
+    cout << "layer_tmp = " << layer_tmp << endl;
+  } 
+  for(int side=0;side<2;side++){
+    for(int sector=0;sector<12;sector++){
+      //for(int layernum=7;layernum<=7+16*3;layernum++){
+      for(int layernum=m_minLayer;layernum<=m_maxLayer;layernum++){
+        PHG4TpcCylinderGeom* layerGeom =
+              seggeo->GetLayerCellGeom(layernum);
+        TrkrDefs::hitsetkey hitsetkey = TpcDefs::genHitSetKey(layernum, sector, side);
+        TrkrHitSetContainer::Iterator hitsetit = hits->findOrAddHitSet(hitsetkey);
+        TrkrHitSet* hitset = hitsetit->second;
+        TrkrHitSet::ConstRange hitrangei = hitset->getHits();
+        for (TrkrHitSet::ConstIterator hitr = hitrangei.first;
+             hitr != hitrangei.second;
+             ++hitr)
+        {
+
+          //int phibin = TpcDefs::getPad(hitr->first);
+          int zbin = TpcDefs::getTBin(hitr->first);
+
+  
+          const double z_abs = fabs(layerGeom->get_zcenter(zbin));
+          const double r = layerGeom->get_radius();
+          TVector3 acceptanceVec(r, 0, z_abs - m_vertexZAcceptanceCut);
+          //const double eta = acceptanceVec.PseudoRapidity();
+  
+          _hit_r = layerGeom->get_radius();
+          _hit_adc = hitr->second->getAdc();
+          _rawHits->Fill();          
+        }
+      }      
+    }
+  }
+  
   for (TrkrHitSetContainer::ConstIterator hitsetitr = hitsetrange.first;
        hitsetitr != hitsetrange.second;
        ++hitsetitr)
@@ -575,7 +636,7 @@ int TPCMLDataInterface::process_event(PHCompositeNode* topNode)
         }
 
         // z-R cut on digitized wavelet
-        PHG4CylinderCellGeom* layerGeom =
+        PHG4TpcCylinderGeom* layerGeom =
             seggeo->GetLayerCellGeom(layer);
         assert(layerGeom);
 
@@ -584,6 +645,14 @@ int TPCMLDataInterface::process_event(PHCompositeNode* topNode)
         TVector3 acceptanceVec(r, 0, z_abs - m_vertexZAcceptanceCut);
         const double eta = acceptanceVec.PseudoRapidity();
 
+        //_hit_r = layerGeom->get_radius();
+        //_hit_adc = hitr->second->getAdc();
+        //_rawHits->Fill();
+        // Event
+        //  - side
+        //    - sector (0-11)
+        //      -> TTree Fill
+        //Sector by sector R phi z (249 z bins)
         if (eta > m_etaAcceptanceCut) continue;
 
         // make new wavelet
@@ -627,6 +696,7 @@ int TPCMLDataInterface::process_event(PHCompositeNode* topNode)
       unsigned int adc = hitr->second->getAdc();
       last_wavelet.push_back(adc);
       last_zbin = zbin;
+
 
       // statistics
       layerChanHit[layer][side][phibin] += 1;

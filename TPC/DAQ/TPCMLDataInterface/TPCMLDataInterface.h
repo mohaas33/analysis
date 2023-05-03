@@ -20,6 +20,8 @@ class Fun4AllHistoManager;
 class SvtxEvalStack;
 class TH1;
 class TH2;
+class TTree;
+
 namespace H5
 {
 class H5File;
@@ -96,6 +98,10 @@ class TPCMLDataInterface : public SubsysReco
 
   std::string m_outputFileNameBase;
   H5::H5File *m_h5File;
+
+  float _hit_r = 0;
+  unsigned int _hit_adc = 0;
+  TTree *_rawHits = nullptr;
 
   int m_minLayer;
   int m_maxLayer;
