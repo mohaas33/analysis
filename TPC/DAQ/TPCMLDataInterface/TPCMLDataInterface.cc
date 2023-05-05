@@ -277,9 +277,9 @@ int TPCMLDataInterface::InitRun(PHCompositeNode* topNode)
   _hit_adc  = 0;
   // TTree
   _rawHits = new TTree("RawHitsTree", "tpc hit tree for ionization");
-  _rawHits->Branch("adc_R1", adc_R1,"adc_R1[2][12][260][16][1152]/F");
-  _rawHits->Branch("adc_R2", adc_R2,"adc_R2[2][12][260][16][1536]/F");
-  _rawHits->Branch("adc_R3", adc_R3,"adc_R3[2][12][260][16][2304]/F");
+  _rawHits->Branch("adc_R1", adc_R1,"adc_R1[2][12][260][16][1152]/I");
+  _rawHits->Branch("adc_R2", adc_R2,"adc_R2[2][12][260][16][1536]/I");
+  _rawHits->Branch("adc_R3", adc_R3,"adc_R3[2][12][260][16][2304]/I");
 
 
 
@@ -312,12 +312,12 @@ int TPCMLDataInterface::process_event(PHCompositeNode* topNode)
     m_svtxevalstack->next_event(topNode);
   }
 
-  SvtxHitEval* hiteval = m_svtxevalstack->get_hit_eval();
-  SvtxTruthEval* trutheval = m_svtxevalstack->get_truth_eval();
+  //SvtxHitEval* hiteval = m_svtxevalstack->get_hit_eval();
+  //SvtxTruthEval* trutheval = m_svtxevalstack->get_truth_eval();
 
-  float gpx = 0;
-  float gpy = 0;
-  float gpz = 0;
+  //float gpx = 0;
+  //float gpy = 0;
+  //float gpz = 0;
 
   PHG4HitContainer* g4hit = findNode::getClass<PHG4HitContainer>(topNode, "G4HIT_TPC");
   cout << "TPCMLDataInterface::process_event - g4 hit node G4HIT_TPC" << endl;
@@ -454,8 +454,8 @@ int TPCMLDataInterface::process_event(PHCompositeNode* topNode)
   vector<vector<hsize_t>> layerDataBufferSize(m_maxLayer + 1, vector<hsize_t>({0, 0}));
   vector<vector<hsize_t>> layerSignalBackgroundDataBufferSize(m_maxLayer + 1, vector<hsize_t>({0, 0}));
 
-  int nWavelet = 0;
-  int sumDataSize = 0;
+  //int nWavelet = 0;
+  //int sumDataSize = 0;
   for (int layer = m_minLayer; layer <= m_maxLayer; ++layer)
   {
     PHG4TpcCylinderGeom* layerGeom =
@@ -528,18 +528,18 @@ int TPCMLDataInterface::process_event(PHCompositeNode* topNode)
   assert(nZBins > 0);
 
   // count hits and make wavelets
-  int last_layer = -1;
-  int last_side = -1;
-  int last_phibin = -1;
-  int last_zbin = -1;
+  //int last_layer = -1;
+  //int last_side = -1;
+  //int last_phibin = -1;
+  //int last_zbin = -1;
   vector<unsigned int> last_wavelet;
-  int last_wavelet_hittime = -1;
+  //int last_wavelet_hittime = -1;
 
   //  for (SvtxHitMap::Iter iter = hits->begin(); iter != hits->end(); ++iter)
   //  {
   //    SvtxHit* hit = iter->second;
   // loop over the TPC HitSet objects
-  TrkrHitSetContainer::ConstRange hitsetrange = hits->getHitSets(TrkrDefs::TrkrId::tpcId);
+  //TrkrHitSetContainer::ConstRange hitsetrange = hits->getHitSets(TrkrDefs::TrkrId::tpcId);
   //eshulga new:
   int ntpc_phibins[3]= {1152, 1536, 2304}; 
   for(int n_sec=0; n_sec<3; n_sec++){
@@ -580,15 +580,16 @@ int TPCMLDataInterface::process_event(PHCompositeNode* topNode)
           // frame of 249 z bins [r] 
           _hit_r = layerGeom->get_radius();
           _hit_adc = hitr->second->getAdc();
-          unsigned short phibin = TpcDefs::getPad(hitr->first);
-          cout<<"side: "<<side<<" sector: "<< sector <<" zbin:"<<zbin<< " layernum: " << layernum <<" layer: " << (layernum-7)/16<<" phibin:"<< phibin <<endl;
+          int phibin = TpcDefs::getPad(hitr->first);
+          //if(_hit_adc>0) cout<<"t="<<zbin<<" ADC="<<_hit_adc<<endl;
+          //cout<<"side: "<<side<<" sector: "<< sector <<" zbin:"<<zbin<< " layernum: " << layernum <<" layer: " << (layernum-7)/16<<" phibin:"<< phibin <<endl;
           if(zbin<260){
-            if(layernum<7+16) adc_R1[side][sector][zbin][(layernum-7)/16][phibin]=_hit_adc;
-            if(layernum>7+16-1 && layernum<7+2*16) adc_R2[side][sector][zbin][(layernum-7)/16][phibin]=_hit_adc;
-            if(layernum>7+2*16-1 && layernum<7+3*16) adc_R3[side][sector][zbin][(layernum-7)/16][phibin]=_hit_adc;
-            cout<<"adc_R1="<<adc_R1[side][sector][zbin][(layernum-7)/16][phibin]<<"_hit_adc"<<_hit_adc<<endl;
-            cout<<"adc_R2="<<adc_R2[side][sector][zbin][(layernum-7)/16][phibin]<<"_hit_adc"<<_hit_adc<<endl;
-            cout<<"adc_R3="<<adc_R3[side][sector][zbin][(layernum-7)/16][phibin]<<"_hit_adc"<<_hit_adc<<endl;
+            if(layernum<7+16) adc_R1[side][sector][zbin][(layernum-7)][phibin]=_hit_adc;
+            if(layernum>7+16-1 && layernum<7+2*16) adc_R2[side][sector][zbin][(layernum-7)-16][phibin]=_hit_adc;
+            if(layernum>7+2*16-1 && layernum<7+3*16) adc_R3[side][sector][zbin][(layernum-7)-2*16][phibin]=_hit_adc;
+            //cout<<"adc_R1="<<adc_R1[side][sector][zbin][(layernum-7)/16][phibin]<<"_hit_adc"<<_hit_adc<<endl;
+            //cout<<"adc_R2="<<adc_R2[side][sector][zbin][(layernum-7)/16][phibin]<<"_hit_adc"<<_hit_adc<<endl;
+            //cout<<"adc_R3="<<adc_R3[side][sector][zbin][(layernum-7)/16][phibin]<<"_hit_adc"<<_hit_adc<<endl;
           }
           //if(number % 249 == 0)
                     
@@ -601,7 +602,7 @@ int TPCMLDataInterface::process_event(PHCompositeNode* topNode)
   //memset( adc_R1, 0.0, sizeof(adc_R1) ); // initialize all the elments to zero
   //memset( adc_R2, 0.0, sizeof(adc_R2) ); // initialize all the elments to zero
   //memset( adc_R3, 0.0, sizeof(adc_R3) ); // initialize all the elments to zero
-
+  /*
   for (TrkrHitSetContainer::ConstIterator hitsetitr = hitsetrange.first;
        hitsetitr != hitsetrange.second;
        ++hitsetitr)
@@ -784,7 +785,7 @@ int TPCMLDataInterface::process_event(PHCompositeNode* topNode)
     }  //     for (TrkrHitSet::ConstIterator hitr = hitrangei.first;
 
   }  //   for(SvtxHitMap::Iter iter = hits->begin(); iter != hits->end(); ++iter) {
-
+  
   // save last wavelet
   if (last_wavelet.size() > 0)
   {
@@ -857,7 +858,7 @@ int TPCMLDataInterface::process_event(PHCompositeNode* topNode)
   assert(m_hDataSize);
   m_hDataSize->Fill(sumDataSize);
   h_norm->Fill("TPC DataSize", sumDataSize);
-
+  */
   return Fun4AllReturnCodes::EVENT_OK;
 }
 

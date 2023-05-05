@@ -51,20 +51,20 @@ int Fun4All_ReadDST_TPCML(const int nEvents = 5,
 
   gSystem->Load("libFROG");
   FROG *fr = new FROG();
-  string inputFileName = fr->location("DST_TRUTH_pythia8_pp_mb-0000000006-00000.root");
+  string inputFileName = fr->location("DST_TRUTH_sHijing_0_20fm-0000000006-00000.root");
   cout << "Next file:" << inputFileName << endl;
-  inputFileName = fr->location("G4Hits_pythia8_pp_mb-0000000006-00000.root");
+  inputFileName = fr->location("G4Hits_sHijing_0_20fm-0000000006-00000.root");
   cout << "Next file:" << inputFileName << endl;
-  inputFileName = fr->location("DST_TRKR_HIT_pythia8_pp_mb-0000000006-00000.root");
+  inputFileName = fr->location("DST_TRKR_HIT_sHijing_0_20fm-0000000006-00000.root");
   cout << "Next file:" << inputFileName << endl;
 
   Input::READHITS = true;
   //INPUTREADHITS::filename[0] = "DST_TRUTH_pythia8_CharmD0_3MHz-0000000002-00000.root";
   //INPUTREADHITS::filename[1] = "DST_TRKR_G4HIT_pythia8_CharmD0_3MHz-0000000002-00000.root";
   //INPUTREADHITS::filename[2] = "DST_TRKR_HIT_pythia8_CharmD0_3MHz-0000000002-00000.root";
-  INPUTREADHITS::filename[0] = fr->location("DST_TRUTH_pythia8_pp_mb-0000000006-00000.root");
-  INPUTREADHITS::filename[1] = fr->location("G4Hits_pythia8_pp_mb-0000000006-00000.root");
-  INPUTREADHITS::filename[2] = fr->location("DST_TRKR_HIT_pythia8_pp_mb-0000000006-00000.root");
+  INPUTREADHITS::filename[0] = fr->location("DST_TRUTH_sHijing_0_20fm-0000000006-00000.root");
+  INPUTREADHITS::filename[1] = fr->location("G4Hits_sHijing_0_20fm-0000000006-00000.root");
+  INPUTREADHITS::filename[2] = fr->location("DST_TRKR_HIT_sHijing_0_20fm-0000000006-00000.root");
   
 //  INPUTREADHITS::filename[3] = "DST_TRUTH_pythia8_CharmD0_3MHz-0000000002-00000.root";
 
