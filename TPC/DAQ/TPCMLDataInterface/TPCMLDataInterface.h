@@ -101,6 +101,12 @@ class TPCMLDataInterface : public SubsysReco
 
   float _hit_r = 0;
   unsigned int _hit_adc = 0;
+
+  float adc_R1[2][12][260][16][1152] ;
+  float adc_R2[2][12][260][16][1536] ;
+  float adc_R3[2][12][260][16][2304] ;
+
+
   TTree *_rawHits = nullptr;
 
   int m_minLayer;

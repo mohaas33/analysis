@@ -265,13 +265,22 @@ int TPCMLDataInterface::InitRun(PHCompositeNode* topNode)
     cout << "TPCMLDataInterface::get_HistoManager - Making H5File " << m_outputFileNameBase + ".h5"
          << endl;
   m_h5File = new H5File(m_outputFileNameBase + ".h5", H5F_ACC_TRUNC);
+  // side sector time R Pad
+  //float adc_R1[2][12][260][16][1152] ;
+  //float adc_R2[2][12][260][16][1536] ;
+  //float adc_R3[2][12][260][16][2304] ;
+  //memset( adc_R1, 0.0, sizeof(adc_R1) ); // initialize all the elments to zero
+  //memset( adc_R2, 0.0, sizeof(adc_R2) ); // initialize all the elments to zero
+  //memset( adc_R3, 0.0, sizeof(adc_R3) ); // initialize all the elments to zero
 
-  _hit_r = 0;
+  _hit_r = 0.0;
   _hit_adc  = 0;
   // TTree
-  _rawHits = new TTree("hTree", "tpc hit tree for ionization");
-  _rawHits->Branch("hit_r", &_hit_r);
-  _rawHits->Branch("hit_adc", &_hit_adc);
+  _rawHits = new TTree("RawHitsTree", "tpc hit tree for ionization");
+  _rawHits->Branch("adc_R1", adc_R1,"adc_R1[2][12][260][16][1152]/F");
+  _rawHits->Branch("adc_R2", adc_R2,"adc_R2[2][12][260][16][1536]/F");
+  _rawHits->Branch("adc_R3", adc_R3,"adc_R3[2][12][260][16][2304]/F");
+
 
 
   return Fun4AllReturnCodes::EVENT_OK;
@@ -562,21 +571,37 @@ int TPCMLDataInterface::process_event(PHCompositeNode* topNode)
 
           //int phibin = TpcDefs::getPad(hitr->first);
           int zbin = TpcDefs::getTBin(hitr->first);
-
-  
+          if(zbin>260) continue;
           const double z_abs = fabs(layerGeom->get_zcenter(zbin));
+          //cout << "ZBin: " << zbin << " t=" << z_abs << endl;
           const double r = layerGeom->get_radius();
           TVector3 acceptanceVec(r, 0, z_abs - m_vertexZAcceptanceCut);
           //const double eta = acceptanceVec.PseudoRapidity();
-  
+          // frame of 249 z bins [r] 
           _hit_r = layerGeom->get_radius();
           _hit_adc = hitr->second->getAdc();
-          _rawHits->Fill();          
+          unsigned short phibin = TpcDefs::getPad(hitr->first);
+          cout<<"side: "<<side<<" sector: "<< sector <<" zbin:"<<zbin<< " layernum: " << layernum <<" layer: " << (layernum-7)/16<<" phibin:"<< phibin <<endl;
+          if(zbin<260){
+            if(layernum<7+16) adc_R1[side][sector][zbin][(layernum-7)/16][phibin]=_hit_adc;
+            if(layernum>7+16-1 && layernum<7+2*16) adc_R2[side][sector][zbin][(layernum-7)/16][phibin]=_hit_adc;
+            if(layernum>7+2*16-1 && layernum<7+3*16) adc_R3[side][sector][zbin][(layernum-7)/16][phibin]=_hit_adc;
+            cout<<"adc_R1="<<adc_R1[side][sector][zbin][(layernum-7)/16][phibin]<<"_hit_adc"<<_hit_adc<<endl;
+            cout<<"adc_R2="<<adc_R2[side][sector][zbin][(layernum-7)/16][phibin]<<"_hit_adc"<<_hit_adc<<endl;
+            cout<<"adc_R3="<<adc_R3[side][sector][zbin][(layernum-7)/16][phibin]<<"_hit_adc"<<_hit_adc<<endl;
+          }
+          //if(number % 249 == 0)
+                    
+
         }
       }      
     }
   }
-  
+  _rawHits->Fill();
+  //memset( adc_R1, 0.0, sizeof(adc_R1) ); // initialize all the elments to zero
+  //memset( adc_R2, 0.0, sizeof(adc_R2) ); // initialize all the elments to zero
+  //memset( adc_R3, 0.0, sizeof(adc_R3) ); // initialize all the elments to zero
+
   for (TrkrHitSetContainer::ConstIterator hitsetitr = hitsetrange.first;
        hitsetitr != hitsetrange.second;
        ++hitsetitr)
