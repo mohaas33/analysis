@@ -20,6 +20,7 @@ class Fun4AllHistoManager;
 class SvtxEvalStack;
 class TH1;
 class TH2;
+class TH3;
 class TTree;
 
 namespace H5
@@ -102,12 +103,13 @@ class TPCMLDataInterface : public SubsysReco
   float _hit_r = 0;
   unsigned int _hit_adc = 0;
 
-  unsigned int adc_R1[2][12][260][16][1152] ;
-  unsigned int adc_R2[2][12][260][16][1536] ;
-  unsigned int adc_R3[2][12][260][16][2304] ;
+  unsigned int adc_R1[24][260][16][96] ;
+  unsigned int adc_R2[24][260][16][128] ;
+  unsigned int adc_R3[24][260][16][192] ;
 
 
   TTree *_rawHits = nullptr;
+  TH3 *h_TXY = nullptr;
 
   int m_minLayer;
   int m_maxLayer;

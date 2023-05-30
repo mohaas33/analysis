@@ -50,6 +50,7 @@
 #include <TFile.h>
 #include <TH1D.h>
 #include <TH2D.h>
+#include <TH3F.h>
 #include <TString.h>
 #include <TTree.h>
 #include <TVector3.h>
@@ -118,7 +119,7 @@ int TPCMLDataInterface::End(PHCompositeNode* topNode)
   if (Verbosity() >= VERBOSITY_SOME)
     cout << "TPCMLDataInterface::End - write to " << m_outputFileNameBase + ".root" << endl;
   PHTFileServer::get().cd(m_outputFileNameBase + ".root");
-
+  /*
   Fun4AllHistoManager* hm = getHistoManager();
   assert(hm);
   for (unsigned int i = 0; i < hm->nHistos(); i++)
@@ -128,13 +129,16 @@ int TPCMLDataInterface::End(PHCompositeNode* topNode)
   TTree* T_Index = new TTree("T_Index", "T_Index");
   assert(T_Index);
   T_Index->Write();
+  */
   _rawHits->Write();
+  h_TXY->Write();
+  /*
   if (m_h5File)
   {
     delete m_h5File;
     m_h5File = nullptr;
   }
-
+  */
   return Fun4AllReturnCodes::EVENT_OK;
 }
 
@@ -264,24 +268,33 @@ int TPCMLDataInterface::InitRun(PHCompositeNode* topNode)
   if (Verbosity() >= VERBOSITY_SOME)
     cout << "TPCMLDataInterface::get_HistoManager - Making H5File " << m_outputFileNameBase + ".h5"
          << endl;
-  m_h5File = new H5File(m_outputFileNameBase + ".h5", H5F_ACC_TRUNC);
+  //m_h5File = new H5File(m_outputFileNameBase + ".h5", H5F_ACC_TRUNC);
   // side sector time R Pad
   //float adc_R1[2][12][260][16][1152] ;
   //float adc_R2[2][12][260][16][1536] ;
   //float adc_R3[2][12][260][16][2304] ;
-  //memset( adc_R1, 0.0, sizeof(adc_R1) ); // initialize all the elments to zero
-  //memset( adc_R2, 0.0, sizeof(adc_R2) ); // initialize all the elments to zero
-  //memset( adc_R3, 0.0, sizeof(adc_R3) ); // initialize all the elments to zero
+  memset( adc_R1, 0, sizeof(adc_R1) ); // initialize all the elments to zero
+  memset( adc_R2, 0, sizeof(adc_R2) ); // initialize all the elments to zero
+  memset( adc_R3, 0, sizeof(adc_R3) ); // initialize all the elments to zero
+
+  //Int_t nsides = 2;
+  //Int_t nsectors = 24;
+  //Int_t ntimebins = 260;
+  //Int_t nlayers = 16;
+  //Int_t npadsr1 = 96;
+  //Int_t npadsr2 = 128;
+  //Int_t npadsr3 = 192;
 
   _hit_r = 0.0;
   _hit_adc  = 0;
   // TTree
   _rawHits = new TTree("RawHitsTree", "tpc hit tree for ionization");
-  _rawHits->Branch("adc_R1", adc_R1,"adc_R1[2][12][260][16][1152]/I");
-  _rawHits->Branch("adc_R2", adc_R2,"adc_R2[2][12][260][16][1536]/I");
-  _rawHits->Branch("adc_R3", adc_R3,"adc_R3[2][12][260][16][2304]/I");
+  //_rawHits->Branch("nsides",   &nsides   ,"nsides/I");
 
-
+  _rawHits->Branch("adc_R1", adc_R1,"adc_R1[24][260][16][96]/I");
+  _rawHits->Branch("adc_R2", adc_R2,"adc_R2[24][260][16][128]/I");
+  _rawHits->Branch("adc_R3", adc_R3,"adc_R3[24][260][16][192]/I");
+  h_TXY = new TH3F("h_TXY","h_TXY",260,-0.5,259.5,120,-60,60,120,-60,60);
 
   return Fun4AllReturnCodes::EVENT_OK;
 }
@@ -290,7 +303,7 @@ int TPCMLDataInterface::process_event(PHCompositeNode* topNode)
 {
   m_evtCounter += 1;
 
-  assert(m_h5File);
+  //assert(m_h5File);
 
   Fun4AllHistoManager* hm = getHistoManager();
   assert(hm);
@@ -426,10 +439,10 @@ int TPCMLDataInterface::process_event(PHCompositeNode* topNode)
 
   //H5 init
   string h5GroupName = boost::str(boost::format("TimeFrame_%1%") % m_evtCounter);
-  unique_ptr<Group> h5Group(new Group(m_h5File->createGroup("/" + h5GroupName)));
-  h5Group->setComment(boost::str(boost::format("Collection of ADC data matrixes in Time Frame #%1%") % m_evtCounter));
-  if (Verbosity())
-    cout << "TPCMLDataInterface::process_event - save to H5 group " << h5GroupName << endl;
+  //unique_ptr<Group> h5Group(new Group(m_h5File->createGroup("/" + h5GroupName)));
+  //h5Group->setComment(boost::str(boost::format("Collection of ADC data matrixes in Time Frame #%1%") % m_evtCounter));
+  //if (Verbosity())
+  //  cout << "TPCMLDataInterface::process_event - save to H5 group " << h5GroupName << endl;
   map<int, shared_ptr<DataSet>> layerH5DataSetMap;
   map<int, shared_ptr<DataSet>> layerH5SignalBackgroundMap;
   map<int, shared_ptr<DataSpace>> layerH5DataSpaceMap;
@@ -440,10 +453,10 @@ int TPCMLDataInterface::process_event(PHCompositeNode* topNode)
   vector<hsize_t> layerSize(1);
   layerSize[0] = static_cast<hsize_t>(m_maxLayer - m_minLayer + 1);
   shared_ptr<DataSpace> H5DataSpaceLayerWaveletDataSize(new DataSpace(1, layerSize.data()));
-  shared_ptr<DataSet> H5DataSetLayerWaveletDataSize(new DataSet(h5Group->createDataSet(
-      "sPHENIXRawDataSizeBytePerLayer",
-      PredType::NATIVE_UINT32,
-      *(H5DataSpaceLayerWaveletDataSize))));
+  //shared_ptr<DataSet> H5DataSetLayerWaveletDataSize(new DataSet(h5Group->createDataSet(
+  //    "sPHENIXRawDataSizeBytePerLayer",
+  //    PredType::NATIVE_UINT32,
+  //    *(H5DataSpaceLayerWaveletDataSize))));
 
   // prepreare stat. storage
   int nZBins = 0;
@@ -511,17 +524,17 @@ int TPCMLDataInterface::process_event(PHCompositeNode* topNode)
     layerH5DataSpaceMap[layer] = shared_ptr<DataSpace>(new DataSpace(2, layerDataBufferSize[layer].data()));
     layerH5SignalBackgroundDataSpaceMap[layer] = shared_ptr<DataSpace>(new DataSpace(2, layerSignalBackgroundDataBufferSize[layer].data()));
 
-    layerH5DataSetMap[layer] = shared_ptr<DataSet>(new DataSet(h5Group->createDataSet(
-        boost::str(boost::format("Data_Layer%1%") % (layer - m_minLayer)),
-        PredType::NATIVE_UINT16,
-        *(layerH5DataSpaceMap[layer]),
-        ds_creatplist)));
+    //layerH5DataSetMap[layer] = shared_ptr<DataSet>(new DataSet(h5Group->createDataSet(
+    //    boost::str(boost::format("Data_Layer%1%") % (layer - m_minLayer)),
+    //    PredType::NATIVE_UINT16,
+    //    *(layerH5DataSpaceMap[layer]),
+    //    ds_creatplist)));
 
-    layerH5SignalBackgroundMap[layer] = shared_ptr<DataSet>(new DataSet(h5Group->createDataSet(
-        boost::str(boost::format("Data_Layer_SignalBackground%1%") % (layer - m_minLayer)),
-        PredType::NATIVE_UINT8,
-        *(layerH5SignalBackgroundDataSpaceMap[layer]),
-        ds_creatplist)));
+    //layerH5SignalBackgroundMap[layer] = shared_ptr<DataSet>(new DataSet(h5Group->createDataSet(
+    //    boost::str(boost::format("Data_Layer_SignalBackground%1%") % (layer - m_minLayer)),
+    //    PredType::NATIVE_UINT8,
+    //    *(layerH5SignalBackgroundDataSpaceMap[layer]),
+    //    ds_creatplist)));
 
   }  //   for (int layer = m_minLayer; layer <= m_maxLayer; ++layer)
 
@@ -541,9 +554,9 @@ int TPCMLDataInterface::process_event(PHCompositeNode* topNode)
   // loop over the TPC HitSet objects
   //TrkrHitSetContainer::ConstRange hitsetrange = hits->getHitSets(TrkrDefs::TrkrId::tpcId);
   //eshulga new:
-  int ntpc_phibins[3]= {1152, 1536, 2304}; 
+  int ntpc_phibins[3]= {1152/12, 1536/12, 2304/12}; 
   for(int n_sec=0; n_sec<3; n_sec++){
-    unsigned int pads_per_sector = ntpc_phibins[n_sec] / 12;
+    unsigned int pads_per_sector = ntpc_phibins[n_sec];
     unsigned int sector = 200 / pads_per_sector;
     unsigned int layernum = 1;
     unsigned int side = 1;
@@ -584,9 +597,33 @@ int TPCMLDataInterface::process_event(PHCompositeNode* topNode)
           //if(_hit_adc>0) cout<<"t="<<zbin<<" ADC="<<_hit_adc<<endl;
           //cout<<"side: "<<side<<" sector: "<< sector <<" zbin:"<<zbin<< " layernum: " << layernum <<" layer: " << (layernum-7)/16<<" phibin:"<< phibin <<endl;
           if(zbin<260){
-            if(layernum<7+16) adc_R1[side][sector][zbin][(layernum-7)][phibin]=_hit_adc;
-            if(layernum>7+16-1 && layernum<7+2*16) adc_R2[side][sector][zbin][(layernum-7)-16][phibin]=_hit_adc;
-            if(layernum>7+2*16-1 && layernum<7+3*16) adc_R3[side][sector][zbin][(layernum-7)-2*16][phibin]=_hit_adc;
+            int Rsec = -1;
+            if(layernum<7+16){
+              //adc_R1[side][sector][zbin][(layernum-7)][phibin_r1]=_hit_adc;
+              Rsec = 0;
+              }                        
+              
+            if(layernum>7+16-1 && layernum<7+2*16)   {
+              //adc_R2[side][sector][zbin][(layernum-7)-16][phibin_r2]=_hit_adc;
+              Rsec = 1;
+              }
+            if(layernum>7+2*16-1 && layernum<7+3*16) {
+              //adc_R3[side][sector][zbin][(layernum-7)-2*16][phibin_r3]=_hit_adc;
+              Rsec = 2;
+              }
+            int phibin_r = phibin-sector*ntpc_phibins[Rsec];
+            //int phibin_r2 = phibin-sector*ntpc_phibins[1];
+            //int phibin_r3 = phibin-sector*ntpc_phibins[2];
+
+            if(Rsec==0)adc_R1[11*side+sector][zbin][(layernum-7)-Rsec*16][phibin_r]=_hit_adc;
+            if(Rsec==1)adc_R2[11*side+sector][zbin][(layernum-7)-Rsec*16][phibin_r]=_hit_adc;
+            if(Rsec==2)adc_R3[11*side+sector][zbin][(layernum-7)-Rsec*16][phibin_r]=_hit_adc;
+            h_TXY->Fill(zbin,layernum*cos(phibin*M_PI/(ntpc_phibins[Rsec]*6)),layernum*sin(phibin*M_PI/(ntpc_phibins[Rsec]*6)));
+            //cout<<"sector="<<sector<<" phibin"<<  phibin
+            //<<"phibin_r1="<<phibin_r1
+            //<<"phibin_r2="<<phibin_r2
+            //<<"phibin_r3="<<phibin_r3
+            //<<endl;
             //cout<<"adc_R1="<<adc_R1[side][sector][zbin][(layernum-7)/16][phibin]<<"_hit_adc"<<_hit_adc<<endl;
             //cout<<"adc_R2="<<adc_R2[side][sector][zbin][(layernum-7)/16][phibin]<<"_hit_adc"<<_hit_adc<<endl;
             //cout<<"adc_R3="<<adc_R3[side][sector][zbin][(layernum-7)/16][phibin]<<"_hit_adc"<<_hit_adc<<endl;
@@ -599,9 +636,9 @@ int TPCMLDataInterface::process_event(PHCompositeNode* topNode)
     }
   }
   _rawHits->Fill();
-  //memset( adc_R1, 0.0, sizeof(adc_R1) ); // initialize all the elments to zero
-  //memset( adc_R2, 0.0, sizeof(adc_R2) ); // initialize all the elments to zero
-  //memset( adc_R3, 0.0, sizeof(adc_R3) ); // initialize all the elments to zero
+  memset( adc_R1, 0, sizeof(adc_R1) ); // initialize all the elments to zero
+  memset( adc_R2, 0, sizeof(adc_R2) ); // initialize all the elments to zero
+  memset( adc_R3, 0, sizeof(adc_R3) ); // initialize all the elments to zero
   /*
   for (TrkrHitSetContainer::ConstIterator hitsetitr = hitsetrange.first;
        hitsetitr != hitsetrange.second;
